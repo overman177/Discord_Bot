@@ -969,24 +969,51 @@ async def tabor(
         await interaction.followup.send(embed=embed)
         return
 
+@tabor.autocomplete("category")
+async def tabor_category_autocomplete(
+    interaction: discord.Interaction,
+    current: str
+) -> list[app_commands.Choice[str]]:
+
+    current = current.lower()
+
+    choices = []
+    for c in TABOR_CATEGORIES:
+        if current in c.lower():
+            emoji = TABOR_CATEGORY_EMOJIS.get(c, "❓")
+            choices.append(
+                app_commands.Choice(
+                    name=f"{emoji} {c}",
+                    value=c
+                )
+            )
+
+    return choices[:25]
+
 @tabor.autocomplete("value")
 async def tabor_value_autocomplete(
     interaction: discord.Interaction,
     current: str
 ) -> list[app_commands.Choice[str]]:
 
-    category = getattr(interaction.namespace, "category", None)
+    # === získáme zadané options ===
+    options = {
+        opt["name"]: opt.get("value")
+        for opt in interaction.data.get("options", [])
+    }
+
+    category = options.get("category")
     if not category:
         return []
 
     category = category.lower()
 
-    # === tým ===
+    # === zjistíme tým ===
     team_role = None
-    team = getattr(interaction.namespace, "team", None)
+    team_id = options.get("team")
 
-    if team and interaction.user.guild_permissions.administrator:
-        team_role = team
+    if team_id and interaction.user.guild_permissions.administrator:
+        team_role = interaction.guild.get_role(int(team_id))
     else:
         team_role = get_team_role(interaction.user)
 
@@ -995,8 +1022,9 @@ async def tabor_value_autocomplete(
 
     camp = get_or_create_camp(interaction.guild.id, team_role)
 
-    # === AUTOCOMPLETE ===
+    # === AUTOCOMPLETE LOGIKA ===
 
+    # 📦 SKLAD
     if category == "sklad":
         return [
             app_commands.Choice(name=f"📦 {i}", value=i)
@@ -1004,6 +1032,7 @@ async def tabor_value_autocomplete(
             if current.lower() in i.lower()
         ][:25]
 
+    # 🏗️ VYLEPŠENÍ
     if category == "vylepšení":
         return [
             app_commands.Choice(name=f"🏗️ {u}", value=u)
@@ -1011,6 +1040,7 @@ async def tabor_value_autocomplete(
             if current.lower() in u.lower()
         ][:25]
 
+    # 📜 BLUEPRINTS
     if category == "blueprints":
         return [
             app_commands.Choice(name=f"📜 {b}", value=b)
@@ -1019,14 +1049,5 @@ async def tabor_value_autocomplete(
         ][:25]
 
     return []
-
-@tabor.autocomplete("value")
-async def tabor_storage_autocomplete(interaction: discord.Interaction, current: str):
-    camp = ...
-    return [
-        app_commands.Choice(name=i, value=i)
-        for i in camp["storage"]
-        if current.lower() in i.lower()
-    ][:50]
 # ===== RUN ==================================================================================================================
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
