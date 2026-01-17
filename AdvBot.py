@@ -975,24 +975,18 @@ async def tabor_value_autocomplete(
     current: str
 ) -> list[app_commands.Choice[str]]:
 
-    # === vytáhneme zadané options ===
-    options = {
-        opt["name"]: opt.get("value")
-        for opt in interaction.data.get("options", [])
-    }
-
-    category = options.get("category")
+    category = getattr(interaction.namespace, "category", None)
     if not category:
         return []
 
     category = category.lower()
 
-    # === zjistíme tým ===
+    # === tým ===
     team_role = None
-    team_id = options.get("team")
+    team = getattr(interaction.namespace, "team", None)
 
-    if team_id and interaction.user.guild_permissions.administrator:
-        team_role = interaction.guild.get_role(int(team_id))
+    if team and interaction.user.guild_permissions.administrator:
+        team_role = team
     else:
         team_role = get_team_role(interaction.user)
 
@@ -1001,9 +995,8 @@ async def tabor_value_autocomplete(
 
     camp = get_or_create_camp(interaction.guild.id, team_role)
 
-    # === AUTOCOMPLETE LOGIKA ===
+    # === AUTOCOMPLETE ===
 
-    # 📦 SKLAD
     if category == "sklad":
         return [
             app_commands.Choice(name=f"📦 {i}", value=i)
@@ -1011,7 +1004,6 @@ async def tabor_value_autocomplete(
             if current.lower() in i.lower()
         ][:25]
 
-    # 🏗️ VYLEPŠENÍ
     if category == "vylepšení":
         return [
             app_commands.Choice(name=f"🏗️ {u}", value=u)
@@ -1019,7 +1011,6 @@ async def tabor_value_autocomplete(
             if current.lower() in u.lower()
         ][:25]
 
-    # 📜 BLUEPRINTS
     if category == "blueprints":
         return [
             app_commands.Choice(name=f"📜 {b}", value=b)
