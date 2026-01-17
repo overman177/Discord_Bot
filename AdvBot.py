@@ -187,7 +187,7 @@ def build_camp_embed(camp: dict, team_role: discord.Role) -> discord.Embed:
     storage = "\n".join(f"• {s}" for s in camp["storage"]) or "*Prázdný*"
 
     embed = discord.Embed(
-        title=f"🏕️ Tábor týmu {team_emoji} {team_name}",
+        title=f"----- 🏕️ Tábor týmu {team_emoji} {team_name} -----",
         color=team_role.color
     )
 
@@ -254,90 +254,110 @@ async def ping(interaction: discord.Interaction) -> None:
     latency = round(bot.latency * 1000)  # v ms
     await interaction.response.send_message(f"🏓 Pong! Latence: {latency} ms")
 
-@bot.tree.command(name="profile", description="zobrazení profilu s úrovní a staty")
-async def profile(interaction: discord.Interaction, member: Optional[discord.Member] =  None) -> None:
-    # pokud není member zadán, použije se volající uživatel
-    target = member or interaction.user
-    # pokud je zadán member, ale volající není admin, zakáže to
-    if member and not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ Nemáš oprávnění zobrazovat profily ostatních!", ephemeral=True)
-        return
-    
-    user = get_or_create_user(target)
-    stats = user.get("stats", {})
-    xp = user.get("xp", 0)
-    level = user.get("level", 1)
-    title = target.nick or target.name
-
-    embed = discord.Embed(title=title, color=target.color)
-    embed.set_thumbnail(url=target.avatar.url if target.avatar else None)
-    embed.add_field(name="⭐ Level", value=level, inline=True)
-    embed.add_field(name="📈 XP", value=xp_bar(xp), inline=False)
-    embed.add_field(name="Staty", 
-        value=( 
-            f"❤️ HP: {stats.get('hp', 0)}\n" 
-            f"🛡️ DEF: {stats.get('def', 0)}\n" 
-            f"🔮 MANA: {stats.get('mana', 0)}\n"
-            f"🪄 FURIOKU: {stats.get('furioku', 0)}\n"
-            f"🍗 HUNGER: {stats.get('hunger', 0)}\n\n"
-            f"💪 STR: {stats.get('str', 0)}\n"
-            f"🤸 DEX: {stats.get('dex', 0)}\n"
-            f"🧠 INT: {stats.get('int', 0)}\n"
-            f"🗣️ CHA: {stats.get('cha', 0)}\n"
-            f"🥷 Stealth: {stats.get('stealth', 0)}\n"
-            f"🌲 Survival: {stats.get('survival', 0)}" 
-        ),
-        inline=False
-    )
-    embed.set_footer(text="Profil uložen v MongoDB")
-    await interaction.response.send_message(embed=embed)
-
-@bot.tree.command(name="stat", description="Úprava statu o danou hodnotu")
-@app_commands.describe(stat="Stat který chceš změnit", amount="Kolik chceš přidat nebo ubrat")
+@bot.tree.command(name="stats", description="Zobrazí nebo upraví statistiky hráče")
+@app_commands.describe(
+    stat="Stat který chceš změnit",
+    amount="Kolik chceš přidat nebo ubrat",
+    member="Cílový hráč (jen admin)"
+)
 @app_commands.choices(stat=STAT_CHOICES)
-async def stat(interaction: discord.Interaction, stat: app_commands.Choice[str], amount: int, member: Optional[discord.Member] = None) -> None:
-    # pokud není member zadán, použije se volající uživatel
+async def stats(
+    interaction: discord.Interaction,
+    stat: Optional[app_commands.Choice[str]] = None,
+    amount: Optional[int] = None,
+    member: Optional[discord.Member] = None
+):
+    # ===== TARGET =====
     target = member or interaction.user
-    # pokud je zadán member, ale volající není admin, zakáže to
     if member and not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ Nemáš oprávnění upravovat cizí staty!", ephemeral=True)
+        await interaction.response.send_message(
+            "❌ Nemáš oprávnění upravovat statistiky ostatních!",
+            ephemeral=True
+        )
         return
-    
+
     guild = await get_guild(interaction)
     if not guild:
-        return  # příkaz nelze spustit mimo server
-    name = target.nick or target.name
-    
-    target_user = get_or_create_user(target)
-    stats = target_user["stats"]
-
-    stat_name = stat.value
-    if stat_name not in STAT_KEYS:
-        await interaction.response.send_message(f"❌ Neplatný stat!", ephemeral=True)
         return
 
+    user = get_or_create_user(target)
+    stats_data = user.get("stats", {})
+    xp = user.get("xp", 0)
+    level = user.get("level", 1)
+    name = target.nick or target.name
 
-    # ===== XP LOGIKA =====
+    # 📊 JEN ZOBRAZENÍ PROFILU
+    if stat is None:
+        embed = discord.Embed(
+            title=f"----- 📊 Profil hráče {name} -----",
+            color=target.color
+        )
+
+        embed.set_thumbnail(url=target.avatar.url if target.avatar else None)
+
+        embed.add_field(name="⭐ Level", value=level, inline=True)
+        embed.add_field(name="📈 XP", value=xp_bar(xp), inline=False)
+
+        embed.add_field(
+            name="Staty",
+            value=(
+                f"❤️ HP: {stats_data.get('hp', 0)}\n"
+                f"🛡️ DEF: {stats_data.get('def', 0)}\n"
+                f"🔮 MANA: {stats_data.get('mana', 0)}\n"
+                f"🪄 FURIOKU: {stats_data.get('furioku', 0)}\n"
+                f"🍗 HUNGER: {stats_data.get('hunger', 0)}\n\n"
+                f"💪 STR: {stats_data.get('str', 0)}\n"
+                f"🤸 DEX: {stats_data.get('dex', 0)}\n"
+                f"🧠 INT: {stats_data.get('int', 0)}\n"
+                f"🗣️ CHA: {stats_data.get('cha', 0)}\n"
+                f"🥷 STEALTH: {stats_data.get('stealth', 0)}\n"
+                f"🌲 SURVIVAL: {stats_data.get('survival', 0)}"
+            ),
+            inline=False
+        )
+
+        embed.set_footer(text="Profil uložen v MongoDB")
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # ✏️ ÚPRAVA STATU
+    if amount is None:
+        await interaction.response.send_message(
+            "❌ Pokud chceš upravit stat, musíš zadat i `amount`.",
+            ephemeral=True
+        )
+        return
+
+    stat_name = stat.value
+
+    # ===== XP =====
     if stat_name == "xp":
         xp, level = add_xp(target, amount)
 
         embed = discord.Embed(color=target.color)
-        embed.description = f"⭐ XP upraveno o **{amount}**\nXP: **{xp}/5**\nLevel: **{level}**"
-        embed.set_footer(text=f"Hráč: {name}", icon_url=target.avatar.url if target.avatar else None)
-    # ===== VŠE OSTATNÍ =====
-    else:
-        old_value = stats.get(stat_name, 0)
-        new_value = old_value + amount
-        stats[stat_name] = new_value
-
-        users_col.update_one(
-            {"user_id": target.id, "guild_id": guild.id},
-            {"$set": {"stats": stats}}
+        embed.description = (
+            f"⭐ XP upraveno o **{amount}**\n"
+            f"XP: **{xp}/5**\n"
+            f"Level: **{level}**"
         )
-
-        embed = discord.Embed(color=target.color)
-        embed.description = f"📊 **{stat_name.upper()}**: {old_value} → **{new_value}**"
         embed.set_footer(text=f"Hráč: {name}", icon_url=target.avatar.url if target.avatar else None)
+
+        await interaction.response.send_message(embed=embed)
+        return
+
+    # ===== OSTATNÍ STATY =====
+    old_value = stats_data.get(stat_name, 0)
+    new_value = old_value + amount
+    stats_data[stat_name] = new_value
+
+    users_col.update_one(
+        {"user_id": target.id, "guild_id": guild.id},
+        {"$set": {"stats": stats_data}}
+    )
+
+    embed = discord.Embed(color=target.color)
+    embed.description = f"📊 **{stat.name}**: {old_value} → **{new_value}**"
+    embed.set_footer(text=f"Hráč: {name}", icon_url=target.avatar.url if target.avatar else None)
 
     await interaction.response.send_message(embed=embed)
 
@@ -492,7 +512,7 @@ async def players(interaction: discord.Interaction):
         return
 
     embed = discord.Embed(
-        title="👥 Hráči v týmech",
+        title="----------👥 Hráči v týmech ----------",
         color=interaction.guild.me.color
     )
 
@@ -520,21 +540,6 @@ async def players(interaction: discord.Interaction):
             inline=True
         )
 
-    # === DUCHOVÉ ===
-    ghosts = [
-        m.display_name
-        for m in guild.members
-        if dead_role in m.roles
-    ]
-
-    embed.add_field(
-        name="☠️ Duchové",
-        value="\n".join(ghosts) if ghosts else "—",
-        inline=True
-    )
-
-    await interaction.response.send_message(embed=embed)
-
 @bot.tree.command(name="inv", description="Zobrazí nebo upraví inventář hráče")
 @app_commands.describe(
     action="add / remove",
@@ -560,7 +565,7 @@ async def inv(
     if action is None:
         items = "\n".join(f"• {i}" for i in inventory) or "*Prázdný*"
         embed = discord.Embed(
-            title=f"🎒 Inventář – {target.display_name}",
+            title=f"----- 🎒 Inventář hráče {target.display_name} -----",
             description=items,
             color=target.color
         )
@@ -657,14 +662,14 @@ async def perks(
 
             for p in perks_list:
                 if p["uses"] == "passive":
-                    passive.append(f"**{p['name']}** – {p['description']}")
+                    passive.append(f"**{p['name']}** = {p['description']}")
                 else:
                     total = int(p["uses"])
                     used = p.get("used", 0)
                     filled = "🟢" * (total - used)
                     empty = "🔴" * used
                     circles = "|".join(list(filled + empty))
-                    active.append(f"**{p['name']}** ({circles}) – {p['description']}")
+                    active.append(f"**{p['name']}** ({circles}) = {p['description']}")
 
             description_text = ""
             if passive:
@@ -673,7 +678,7 @@ async def perks(
                 description_text += "**🍄 Aktivní perky:**\n" + "\n".join(active)
 
         embed = discord.Embed(
-            title=f"✨ Perky – {target.display_name}",
+            title=f"----- ✨ Perky hráče {target.display_name} -----",
             description=description_text,
             color=target.color
         )
@@ -1021,7 +1026,7 @@ async def tabor_value_autocomplete(
             for b in camp.get("blueprints", [])
             if current.lower() in b.lower()
         ][:25]
-    
+
     return []
 
 @tabor.autocomplete("value")
