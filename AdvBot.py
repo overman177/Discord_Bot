@@ -539,6 +539,19 @@ async def players(interaction: discord.Interaction):
             value="\n".join(alive_players) if alive_players else "—",
             inline=True
         )
+    
+    ghosts = [
+        m.display_name
+        for m in guild.members
+        if dead_role in m.roles and not m.bot
+    ]
+
+    embed.add_field(
+        name="👻 Duchové",
+        value="\n".join(ghosts) if ghosts else "—",
+        inline=True
+    )
+    
     await interaction.response.send_message(embed=embed)
 
 
