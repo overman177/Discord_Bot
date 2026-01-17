@@ -22,19 +22,18 @@ keep_alive()
 # ===== SEZNAMY ===========================================================================================================
 STAT_EMOJIS = {
     "xp": "⭐",
-    "hp": "🩷",
-    "def": "🧱",
+    "hp": "❤️",
+    "def": "🛡️",
     "mana": "🔮",
     "furioku": "🪄",
     "hunger": "🍗",
     "str": "💪",
     "dex": "🤸",
     "int": "🧠",
-    "cha": "🎤",
+    "cha": "🗣️",
     "stealth": "🥷",
     "survival": "🌲",
 }
-
 CHECK_STAT_KEYS = ["str","dex","int","cha","stealth","survival"]
 MAIN_STAT_KEYS = ["hp", "def", "mana", "furioku", "hunger", "xp"]
 STAT_KEYS = CHECK_STAT_KEYS + MAIN_STAT_KEYS
@@ -80,14 +79,15 @@ TEAM_EMOJIS = {
 TEAM_ROLES = ["Unda", "Ignis", "Aeris", "Terra"]
 DEAD_ROLE_NAME = "Duch"
 
-TABOR_CATEGORIES = [
-    "dřevo",
-    "kámen",
-    "scrap",
-    "upgrade",
-    "sklad",
-    "blueprints",
-]
+TABOR_CATEGORY_EMOJIS = {
+    "dřevo": "🪵",
+    "kámen": "🪨",
+    "scrap": "🔩",
+    "vylepšení": "🏗️",
+    "sklad": "📦",
+    "blueprints": "📜",
+}
+TABOR_CATEGORIES = ["dřevo","kámen","scrap","vylepšení","sklad","blueprints",]
 
 # ===== DATABASE ===========================================================================================================
 client = MongoClient(url, server_api=ServerApi('1'))
@@ -193,17 +193,16 @@ def build_camp_embed(camp: dict, team_role: discord.Role) -> discord.Embed:
 
     # ===== Suroviny a Sklad vedle sebe =====
     resources_text = (
-        f"Dřevo: `{r.get('wood',0)}`\n"
-        f"Kámen: `{r.get('stone',0)}`\n"
-        f"Scrap: `{r.get('scrap',0)}`"
+        f"🪵Dřevo: `{r.get('wood',0)}`\n"
+        f"🪨Kámen: `{r.get('stone',0)}`\n"
+        f"🔩Scrap: `{r.get('scrap',0)}`"
     )
-    embed.add_field(name="**Suroviny**", value=resources_text, inline=True)
-    embed.add_field(name="**Sklad**", value=storage, inline=True)
-    embed.add_field(name="**Vylepšení**", value=upgrades, inline=False)
-    embed.add_field(name="**Blueprinty**", value=blueprints, inline=False)
+    embed.add_field(name="**💎Suroviny**", value=resources_text, inline=True)
+    embed.add_field(name="**📦Sklad**", value=storage, inline=True)
+    embed.add_field(name="**🏗️Vylepšení**", value=upgrades, inline=False)
+    embed.add_field(name="**📜Blueprinty**", value=blueprints, inline=False)
 
     return embed
-
 
 def add_xp(member: discord.Member, amount: int) -> tuple[int, int]:
     user = get_or_create_user(member)
@@ -869,7 +868,7 @@ async def tabor(
             )
             await interaction.response.send_message(f"Bylo přidáno {category} {amount}x")
 
-        elif category.lower() == "upgrade":
+        elif category.lower() == "vylepšení":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$addToSet": {"upgrades": value}}
@@ -889,8 +888,6 @@ async def tabor(
                 {"$addToSet": {"blueprints": value}}
             )
             await interaction.response.send_message(f"Nový Blueprint nalezen: {value}")
-
-            
 
         camp = get_or_create_camp(interaction.guild.id, team_role)
         embed = build_camp_embed(camp, team_role)
@@ -918,7 +915,7 @@ async def tabor(
             )
             await interaction.response.send_message(f"Bylo odebráno {category} {amount}x")
 
-        elif category.lower() == "upgrade":
+        elif category.lower() == "vylepšení":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$pull": {"upgrades": value}}
@@ -942,8 +939,7 @@ async def tabor(
         camp = get_or_create_camp(interaction.guild.id, team_role)
         embed = build_camp_embed(camp, team_role)
 
-
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
         return
 
 @tabor.autocomplete("category")
@@ -951,11 +947,18 @@ async def tabor_category_autocomplete(
     interaction: discord.Interaction,
     current: str
 ) -> list[app_commands.Choice[str]]:
-    return [
-        app_commands.Choice(name=c, value=c)
-        for c in TABOR_CATEGORIES
-        if current.lower() in c.lower()
-    ]
+
+    choices = []
+    for c in TABOR_CATEGORIES:
+        if current.lower() in c.lower():
+            emoji = TABOR_CATEGORY_EMOJIS.get(c, "❓")
+            choices.append(
+                app_commands.Choice(
+                    name=f"{emoji} {c}",
+                    value=c
+                )
+            )
+    return choices[:25]
 
 @tabor.autocomplete("value")
 async def tabor_storage_autocomplete(interaction: discord.Interaction, current: str):
