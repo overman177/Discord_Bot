@@ -867,28 +867,28 @@ async def tabor(
                 {"_id": camp["_id"]},
                 {"$inc": {f"resources.{key}": amount}}
             )
-            await interaction.channel.send(f"Bylo přidáno {category} {amount}x")
+            await interaction.response.send_message(f"Bylo přidáno {category} {amount}x")
 
         elif category.lower() == "upgrade":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$addToSet": {"upgrades": value}}
             )
-            await interaction.channel.send(f"Vylepšení: {value} bylo postaveno")
+            await interaction.response.send_message(f"Vylepšení: {value} bylo postaveno")
 
         elif category.lower() == "sklad":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$addToSet": {"storage": value}}
             )
-            await interaction.channel.send(f"Do skladu bylo přidáno: {value}")
+            await interaction.response.send_message(f"Do skladu bylo přidáno: {value}")
 
         elif category.lower() == "blueprints":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$addToSet": {"blueprints": value}}
             )
-            await interaction.channel.send(f"Nový Blueprint nalezen: {value}")
+            await interaction.response.send_message(f"Nový Blueprint nalezen: {value}")
 
             
 
@@ -916,28 +916,28 @@ async def tabor(
                 {"_id": camp["_id"]},
                 {"$inc": {f"resources.{key}": -amount}}
             )
-            await interaction.channel.send(f"Bylo odebráno {category} {amount}x")
+            await interaction.response.send_message(f"Bylo odebráno {category} {amount}x")
 
         elif category.lower() == "upgrade":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$pull": {"upgrades": value}}
             )
-            await interaction.channel.send(f"Vylepšení: {value} bylo zničeno")
+            await interaction.response.send_message(f"Vylepšení: {value} bylo zničeno")
 
         elif category.lower() == "sklad":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$pull": {"storage": value}}
             )
-            await interaction.channel.send(f"Ze skladu bylo odebráno: {value}")
+            await interaction.response.send_message(f"Ze skladu bylo odebráno: {value}")
 
         elif category.lower() == "blueprints":
             camps_col.update_one(
                 {"_id": camp["_id"]},
                 {"$pull": {"blueprints": value}}
             )
-            await interaction.channel.send(f"Blueprint ztracen: {value}")
+            await interaction.response.send_message(f"Blueprint ztracen: {value}")
 
         camp = get_or_create_camp(interaction.guild.id, team_role)
         embed = build_camp_embed(camp, team_role)
