@@ -479,19 +479,27 @@ async def status(
 @bot.tree.command(name="players", description="Zobrazí hráče podle týmů")
 async def players(interaction: discord.Interaction):
 
-    guild = await get_guild(interaction)
+    guild = interaction.guild
     if not guild:
-        return  # příkaz nelze spustit mimo server
+        return
 
     dead_role = discord.utils.get(guild.roles, name=DEAD_ROLE_NAME)
+    if not dead_role:
+        await interaction.response.send_message(
+            "❌ DEAD role neexistuje.",
+            ephemeral=True
+        )
+        return
 
     embed = discord.Embed(
-        title="---------- 👥 Hráči v týmech 👥 ----------",
+        title="👥 Hráči v týmech",
         color=interaction.guild.me.color
     )
 
+    # === TÝMY – JEN ŽIVÍ ===
     for team_name, emoji in TEAM_EMOJIS.items():
         team_role = discord.utils.get(guild.roles, name=team_name)
+
         if not team_role:
             embed.add_field(
                 name=f"{emoji} {team_name}",
@@ -500,16 +508,30 @@ async def players(interaction: discord.Interaction):
             )
             continue
 
-        players = []
-        for member in team_role.members:
-            suffix = " ☠️" if dead_role in member.roles else ""
-            players.append(f"{member.display_name}{suffix}")
+        alive_players = [
+            m.display_name
+            for m in team_role.members
+            if dead_role not in m.roles
+        ]
 
         embed.add_field(
             name=f"{emoji} {team_name}",
-            value="\n".join(players) if players else "—",
+            value="\n".join(alive_players) if alive_players else "—",
             inline=True
         )
+
+    # === DUCHOVÉ ===
+    ghosts = [
+        m.display_name
+        for m in guild.members
+        if dead_role in m.roles
+    ]
+
+    embed.add_field(
+        name="☠️ Duchové",
+        value="\n".join(ghosts) if ghosts else "—",
+        inline=True
+    )
 
     await interaction.response.send_message(embed=embed)
 
@@ -942,23 +964,65 @@ async def tabor(
         await interaction.followup.send(embed=embed)
         return
 
-@tabor.autocomplete("category")
-async def tabor_category_autocomplete(
+@tabor.autocomplete("value")
+async def tabor_value_autocomplete(
     interaction: discord.Interaction,
     current: str
 ) -> list[app_commands.Choice[str]]:
 
-    choices = []
-    for c in TABOR_CATEGORIES:
-        if current.lower() in c.lower():
-            emoji = TABOR_CATEGORY_EMOJIS.get(c, "❓")
-            choices.append(
-                app_commands.Choice(
-                    name=f"{emoji} {c}",
-                    value=c
-                )
-            )
-    return choices[:25]
+    # === vytáhneme zadané options ===
+    options = {
+        opt["name"]: opt.get("value")
+        for opt in interaction.data.get("options", [])
+    }
+
+    category = options.get("category")
+    if not category:
+        return []
+
+    category = category.lower()
+
+    # === zjistíme tým ===
+    team_role = None
+    team_id = options.get("team")
+
+    if team_id and interaction.user.guild_permissions.administrator:
+        team_role = interaction.guild.get_role(int(team_id))
+    else:
+        team_role = get_team_role(interaction.user)
+
+    if not team_role:
+        return []
+
+    camp = get_or_create_camp(interaction.guild.id, team_role)
+
+    # === AUTOCOMPLETE LOGIKA ===
+
+    # 📦 SKLAD
+    if category == "sklad":
+        return [
+            app_commands.Choice(name=f"📦 {i}", value=i)
+            for i in camp.get("storage", [])
+            if current.lower() in i.lower()
+        ][:25]
+
+    # 🏗️ VYLEPŠENÍ
+    if category == "vylepšení":
+        return [
+            app_commands.Choice(name=f"🏗️ {u}", value=u)
+            for u in camp.get("upgrades", [])
+            if current.lower() in u.lower()
+        ][:25]
+
+    # 📜 BLUEPRINTS
+    if category == "blueprints":
+        return [
+            app_commands.Choice(name=f"📜 {b}", value=b)
+            for b in camp.get("blueprints", [])
+            if current.lower() in b.lower()
+        ][:25]
+    
+    return []
 
 @tabor.autocomplete("value")
 async def tabor_storage_autocomplete(interaction: discord.Interaction, current: str):
