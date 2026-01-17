@@ -539,6 +539,8 @@ async def players(interaction: discord.Interaction):
             value="\n".join(alive_players) if alive_players else "—",
             inline=True
         )
+    await interaction.response.send_message(embed=embed)
+
 
 @bot.tree.command(name="inv", description="Zobrazí nebo upraví inventář hráče")
 @app_commands.describe(
