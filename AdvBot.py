@@ -1,126 +1,22 @@
 import discord
-from discord.ext import commands
 from discord import app_commands
-from typing import Optional, List
+from typing import Optional
 
 import logging
-import os
 import random
 
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-
-from dotenv import load_dotenv
-
-
-load_dotenv()
-token = os.getenv('DISCORD_TOKEN')
-url = os.getenv('MONGODB_SERVER')
-# ===== SEZNAMY ===========================================================================================================
-STAT_EMOJIS = {
-    "xp": "⭐",
-    "hp": "❤️",
-    "def": "🛡️",
-    "mana": "🔮",
-    "furioku": "🪄",
-    "hunger": "🍗",
-    "str": "💪",
-    "dex": "🤸",
-    "int": "🧠",
-    "cha": "🗣️",
-    "stealth": "🥷",
-    "survival": "🌲",
-}
-CHECK_STAT_KEYS = ["str","dex","int","cha","stealth","survival"]
-MAIN_STAT_KEYS = ["hp", "def", "mana", "furioku", "hunger", "xp"]
-STAT_KEYS = CHECK_STAT_KEYS + MAIN_STAT_KEYS
-
-STAT_CHOICES = [
-    app_commands.Choice(name=f"{STAT_EMOJIS[key]}{key.upper()}", value=key)
-    for key in STAT_KEYS
-]
-CHECK_STAT_CHOICES = [
-    choice for choice in STAT_CHOICES if choice.value in CHECK_STAT_KEYS
-]
-
-DEFAULT_STATS = {key: 0 for key in STAT_KEYS}
-DEFAULT_STATS["hp"] = 50  # default HP
-
-STATUS_EFFECTS = {
-    "bleeding": "🩸 Bleeding",
-    "poisoned": "☠️ Poisoned",
-    "cold": "❄️ Cold",
-    "hot": "🔥 Hot",
-    "concussed": "💫 Concussed",
-}
-STATUS_CHOICES = [
-    app_commands.Choice(name=label, value=key)
-    for key, label in STATUS_EFFECTS.items()
-]
-
-ACTION_CHOICES = [
-    app_commands.Choice(name="➕Add", value="add"),
-    app_commands.Choice(name="❌Remove", value="remove"),
-]
-
-PERK_USES_CHOICES = [
-    app_commands.Choice(name="Pasivní", value="passive")
-]
-
-TEAM_EMOJIS = {
-    "Unda": "🌊",
-    "Ignis": "🔥",
-    "Aeris": "🌪️",
-    "Terra": "🌱",
-}
-TEAM_ROLES = ["Unda", "Ignis", "Aeris", "Terra"]
-DEAD_ROLE_NAME = "Duch"
-
-TABOR_CATEGORY_EMOJIS = {
-    "dřevo": "🪵",
-    "kámen": "🪨",
-    "scrap": "🔩",
-    "vylepšení": "🏗️",
-    "sklad": "📦",
-    "blueprints": "📜",
-}
-TABOR_CATEGORIES = ["dřevo","kámen","scrap","vylepšení","sklad","blueprints",]
-
-# ===== DATABASE ===========================================================================================================
-client = MongoClient(url, server_api=ServerApi('1'))
-
-db = client["discord_bot"]
-users_col = db["users"]
-camps_col = db["camps"]
-
-# připojení k databázi
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
-
-# ===== DISCORD =============================================================================================================
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-
-bot = commands.Bot(command_prefix='/', intents=intents)
-GUILD_ID = 1419671754032287837
-
-@bot.event
-async def on_ready() -> None:
-    print(f"Přihlášen jako {bot.user}")
-    # Synchrinizacevslash commandu s discordem
-    try:
-        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print(f"Synced {len(synced)} command(s)")
-    except Exception as e:
-        print(f"Failed to sync commands: {e}")
+from config import *
+from handler import *
+from db import *
 
 # ===== FUNCTIONS =============================================================================================================
+def make_embed(title: str, description: str = "", member: discord.Member | None = None, color=None):
+    color = color or (member.color if member else 0x2f3136)
+    embed = discord.Embed(title=title, description=description, color=color)
+    if member:
+        embed.set_footer(text=f"Hráč: {member.display_name}", icon_url=member.avatar.url if member.avatar else None)
+    return embed
+
 def roll_d20() -> int:
     return random.randint(1, 20)
 
@@ -202,24 +98,18 @@ def build_camp_embed(camp: dict, team_role: discord.Role) -> discord.Embed:
 
     return embed
 
-def add_xp(member: discord.Member, amount: int) -> tuple[int, int]:
-    user = get_or_create_user(member)
-    xp = user.get("xp", 0) + amount
-    level = user.get("level", 1)
-
-    if xp < 0:
-        xp = 0
-
-    # Level up
-    while xp >= 5:
-        xp -= 5
-        level += 1
-
-    # Uložení do DB
+def update_user(member: discord.Member, data: dict):
     users_col.update_one(
         {"user_id": member.id, "guild_id": member.guild.id},
-        {"$set": {"xp": xp, "level": level}}
+        {"$set": data}
     )
+
+def add_xp(member: discord.Member, amount: int):
+    user = get_or_create_user(member)
+    xp = max(user.get("xp",0) + amount, 0)
+    level = user.get("level",1) + xp // 5
+    xp %= 5
+    update_user(member, {"xp": xp, "level": level})
     return xp, level
 
 def xp_bar(xp: int) -> str:
@@ -347,10 +237,7 @@ async def stats(
     new_value = old_value + amount
     stats_data[stat_name] = new_value
 
-    users_col.update_one(
-        {"user_id": target.id, "guild_id": guild.id},
-        {"$set": {"stats": stats_data}}
-    )
+    update_user(target, {"stats": stats_data})
 
     embed = discord.Embed(color=target.color)
     embed.description = f"📊 **{stat.name}**: {old_value} → **{new_value}**"
@@ -428,10 +315,7 @@ async def newday(interaction: discord.Interaction):
                 perk["used"] = 0
 
         # ===== ULOŽENÍ DO DB =====
-        users_col.update_one(
-            {"user_id": member.id, "guild_id": guild.id},
-            {"$set": {"stats": stats, "perks": perks_list}}
-        )
+        update_user(member, {"stats": stats, "perks": perks_list})
 
     # ===== ZPRÁVA =====
     embed = discord.Embed(
@@ -609,10 +493,7 @@ async def inv(
         msg = f"🗑️ **{item}** odebrán z inventáře **{target.display_name}**"
 
     # ===== Uložení do DB =====
-    users_col.update_one(
-        {"user_id": target.id, "guild_id": interaction.guild.id},
-        {"$set": {"inventory": inventory}}
-    )
+    update_user(target, {"inventory": inventory})
 
     # ===== Embed =====
     embed = discord.Embed(description=msg, color=target.color)
@@ -723,10 +604,7 @@ async def perks(
         perk = {"name": name, "description": description, "uses": uses_value, "used": 0}
         perks_list.append(perk)
 
-        users_col.update_one(
-            {"user_id": target.id, "guild_id": interaction.guild.id},
-            {"$set": {"perks": perks_list}}
-        )
+        update_user(target, {"perks": perks_list})
 
         await interaction.response.send_message(
             f"✅ Perk **{name}** přidán hráči **{target.display_name}**"
@@ -752,10 +630,7 @@ async def perks(
 
         perks_list.remove(perk_to_remove)
 
-        users_col.update_one(
-            {"user_id": target.id, "guild_id": interaction.guild.id},
-            {"$set": {"perks": perks_list}}
-        )
+        update_user(target, {"perks": perks_list})
 
         await interaction.response.send_message(
             f"🗑️ Perk **{name}** odstraněn hráči **{target.display_name}**"
@@ -796,10 +671,7 @@ async def perks(
 
         perk_to_use["used"] = perk_to_use.get("used", 0) + 1
 
-        users_col.update_one(
-            {"user_id": target.id, "guild_id": interaction.guild.id},
-            {"$set": {"perks": perks_list}}
-        )
+        update_user(target, {"perks": perks_list})
 
         await interaction.response.send_message(
             f"⚡ **{target.display_name}** použil aktivní perk **{name}**."
@@ -856,130 +728,68 @@ async def tabor(
     # ADMIN override
     if team:
         if not interaction.user.guild_permissions.administrator:
-            await interaction.response.send_message(
-                "❌ Jen admin může spravovat cizí tábor.",
-                ephemeral=True
-            )
+            await interaction.response.send_message("❌ Jen admin může spravovat cizí tábor.", ephemeral=True)
             return
-
         if team.name not in TEAM_ROLES:
-            await interaction.response.send_message(
-                "❌ Zvolená role není tým.",
-                ephemeral=True
-            )
+            await interaction.response.send_message("❌ Zvolená role není tým.", ephemeral=True)
             return
-
         team_role = team
-
     else:
         team_role = get_team_role(interaction.user)
         if not team_role:
-            await interaction.response.send_message(
-                "❌ Nejsi členem žádného týmu.",
-                ephemeral=True
-            )
+            await interaction.response.send_message("❌ Nejsi členem žádného týmu.", ephemeral=True)
             return
 
     camp = get_or_create_camp(interaction.guild.id, team_role)
 
+    # ===== VIEW ONLY =====
     if not action:
         embed = build_camp_embed(camp, team_role)
         await interaction.response.send_message(embed=embed)
         return
     
-    if action.value == "add":
-        if not category or not value:
-            await interaction.response.send_message("❌ Chybí parametr.", ephemeral=True)
-            return
-
-        if category in ["dřevo", "kámen", "scrap"]:
-            key = {"dřevo": "wood", "kámen": "stone", "scrap": "scrap"}[category]
-
-            try:
-                amount = int(value)
-            except ValueError:
-                await interaction.response.send_message("❌ Musíš zadat číslo.", ephemeral=True)
-                return
-
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$inc": {f"resources.{key}": amount}}
-            )
-            await interaction.response.send_message(f"Bylo přidáno {category} {amount}x")
-
-        elif category.lower() == "vylepšení":
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$addToSet": {"upgrades": value}}
-            )
-            await interaction.response.send_message(f"Vylepšení: {value} bylo postaveno")
-
-        elif category.lower() == "sklad":
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$addToSet": {"storage": value}}
-            )
-            await interaction.response.send_message(f"Do skladu bylo přidáno: {value}")
-
-        elif category.lower() == "blueprints":
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$addToSet": {"blueprints": value}}
-            )
-            await interaction.response.send_message(f"Nový Blueprint nalezen: {value}")
-
-        camp = get_or_create_camp(interaction.guild.id, team_role)
-        embed = build_camp_embed(camp, team_role)
-
-        await interaction.followup.send(embed=embed)
-        return
+    # mapování kategorií na DB klíče
+    resource_map = {"dřevo": "wood", "kámen": "stone", "scrap": "scrap"}
+    list_map = {"vylepšení": "upgrades", "sklad": "storage", "blueprints": "blueprints"}
     
-    if action.value == "remove":
-        if not category or not value:
-            await interaction.response.send_message("❌ Chybí parametr.", ephemeral=True)
+    if category in resource_map:
+        # === RESOURCES ===
+        try:
+            amount = int(value)
+        except ValueError:
+            await interaction.response.send_message("❌ Musíš zadat číslo.", ephemeral=True)
             return
+        op = 1 if action.value == "add" else -1
+        camps_col.update_one(
+            {"_id": camp["_id"]},
+            {"$inc": {f"resources.{resource_map[category]}": amount * op}}
+        )
+        msg = f"{'Přidáno' if op > 0 else 'Odebráno'} {category} {abs(amount)}x"
 
-        if category in ["dřevo", "kámen", "scrap"]:
-            key = {"dřevo": "wood", "kámen": "stone", "scrap": "scrap"}[category]
-
-            try:
-                amount = int(value)
-            except ValueError:
-                await interaction.response.send_message("❌ Musíš zadat číslo.", ephemeral=True)
-                return
-
+    elif category in list_map:
+        # === LISTS ===
+        key = list_map[category]
+        if action.value == "add":
             camps_col.update_one(
                 {"_id": camp["_id"]},
-                {"$inc": {f"resources.{key}": -amount}}
+                {"$addToSet": {key: value}}
             )
-            await interaction.response.send_message(f"Bylo odebráno {category} {amount}x")
-
-        elif category.lower() == "vylepšení":
+            msg = f"{category.capitalize()}: {value} přidáno"
+        else:
             camps_col.update_one(
                 {"_id": camp["_id"]},
-                {"$pull": {"upgrades": value}}
+                {"$pull": {key: value}}
             )
-            await interaction.response.send_message(f"Vylepšení: {value} bylo zničeno")
-
-        elif category.lower() == "sklad":
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$pull": {"storage": value}}
-            )
-            await interaction.response.send_message(f"Ze skladu bylo odebráno: {value}")
-
-        elif category.lower() == "blueprints":
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$pull": {"blueprints": value}}
-            )
-            await interaction.response.send_message(f"Blueprint ztracen: {value}")
-
-        camp = get_or_create_camp(interaction.guild.id, team_role)
-        embed = build_camp_embed(camp, team_role)
-
-        await interaction.followup.send(embed=embed)
+            msg = f"{category.capitalize()}: {value} odebráno"
+    else:
+        await interaction.response.send_message("❌ Neznámá kategorie.", ephemeral=True)
         return
+
+    # ===== SEND FEEDBACK + EMBED =====
+    camp = get_or_create_camp(interaction.guild.id, team_role)
+    embed = build_camp_embed(camp, team_role)
+    await interaction.response.send_message(msg)
+    await interaction.followup.send(embed=embed)
 
 @tabor.autocomplete("category")
 async def tabor_category_autocomplete(
@@ -1061,5 +871,50 @@ async def tabor_value_autocomplete(
         ][:25]
 
     return []
+
+@bot.tree.command(name="gamba", description="Točíme maty")
+async def gamba(interaction: discord.Interaction):
+    target = interaction.user
+    #name = target.nick or target.name
+
+    grid = [[random.choice(SYMBOLS) for _ in range(3)] for _ in range(3)]
+
+    middle = grid[1]
+    win = middle.count(middle[0]) == 3
+
+    all_symbols = [symbol for row in grid for symbol in row]
+    super_jackpot = all(symbol == all_symbols[0] for symbol in all_symbols)
+
+    slot_art=f"""  
+                **-----------**
+                **|{grid[0][0]}|{grid[0][1]}|{grid[0][2]}|**
+                **|{grid[1][0]}|{grid[1][1]}|{grid[1][2]}|<-**
+                **|{grid[2][0]}|{grid[2][1]}|{grid[2][2]}|**
+                **-----------**
+            """
+
+    embed = discord.Embed(title="🎰 GAMBA 🎰",description=slot_art, color=target.color)
+
+    if super_jackpot:
+        embed.add_field(
+            name="💎 SUPER JACKPOT! 💎",
+            value=f"Všechny symboly jsou {all_symbols[0]}!",
+            inline=False
+        )
+    elif win:
+        embed.add_field(
+            name="🏆 JACKPOT! 🏆",
+            value=f"**{middle[0]} {middle[1]} {middle[2]}**\nJackpot padl!",
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="❌ Smůla ❌",
+            value="Zkus to znovu…",
+            inline=False
+        )
+    
+    await interaction.response.send_message(embed=embed)
+
 # ===== RUN ==================================================================================================================
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
