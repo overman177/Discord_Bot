@@ -12,13 +12,10 @@ from pymongo.server_api import ServerApi
 
 from dotenv import load_dotenv
 
-from keep_alive import keep_alive
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 url = os.getenv('MONGODB_SERVER')
-
-keep_alive()
 # ===== SEZNAMY ===========================================================================================================
 STAT_EMOJIS = {
     "xp": "⭐",
