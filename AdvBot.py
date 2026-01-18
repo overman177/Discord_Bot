@@ -111,13 +111,14 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix='/', intents=intents)
+GUILD_ID = 1419671754032287837
 
 @bot.event
 async def on_ready() -> None:
     print(f"Přihlášen jako {bot.user}")
     # Synchrinizacevslash commandu s discordem
     try:
-        synced = await bot.tree.sync()
+        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
         print(f"Synced {len(synced)} command(s)")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
@@ -248,7 +249,6 @@ async def resolve_target(interaction: discord.Interaction, member: discord.Membe
     return target
 
 # ===== COMMANDS =============================================================================================================
-
 @bot.tree.command(name="ping", description="Kontrola odezvy bota")
 async def ping(interaction: discord.Interaction) -> None:
     latency = round(bot.latency * 1000)  # v ms
