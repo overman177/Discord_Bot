@@ -1,4 +1,4 @@
-from features._import_ import *
+from utils._import_ import *
 
 @bot.tree.command(name="players", description="Zobrazí hráče podle týmů")
 async def players(interaction: discord.Interaction) -> None:

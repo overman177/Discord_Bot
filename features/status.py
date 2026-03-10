@@ -1,4 +1,4 @@
-from features._import_ import *
+from utils._import_ import *
 
 @bot.tree.command(name="status", description="Přidá nebo odebere status efekt hráči")
 @app_commands.describe(action="Přidat nebo odebrat status", status="Status efekt")

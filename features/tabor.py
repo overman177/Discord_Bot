@@ -1,10 +1,12 @@
-from features._import_ import *
+from utils._import_ import *
 
 @bot.tree.command(name="tabor", description="Zobrazí nebo spravuje tábor týmu")
 @app_commands.describe(
     action="add / remove",
-    category="co bude upraveno",
-    value="Hodnota (číslo nebo text)",
+    category="kategorie tábora",
+    item="Název položky",
+    amount="Počet",
+    desc="Popis položky",
     team="Tým (jen admin)"
 )
 @app_commands.choices(action=ACTION_CHOICES)
@@ -12,7 +14,9 @@ async def tabor(
     interaction: discord.Interaction,
     action: Optional[app_commands.Choice[str]] = None,
     category: Optional[str] = None,
-    value: Optional[str] = None,
+    item: str | None = None,
+    amount: int | None = None,
+    desc: str | None = None,
     team: Optional[discord.Role] = None
 ) -> None:
     # ADMIN override
@@ -43,34 +47,116 @@ async def tabor(
     list_map = {"vylepšení": "upgrades", "sklad": "storage", "blueprints": "blueprints"}
     
     if category in resource_map:
-        # === RESOURCES ===
-        try:
-            amount = int(value)
-        except ValueError:
-            await interaction.response.send_message("❌ Musíš zadat číslo.", ephemeral=True)
+        if amount is None:
+            await interaction.response.send_message(
+                "❌ Musíš zadat počet.",
+                ephemeral=True
+            )
             return
+
+        if amount <= 0:
+            await interaction.response.send_message(
+                "❌ Počet musí být větší než 0.",
+                ephemeral=True
+            )
+            return
+
         op = 1 if action.value == "add" else -1
-        camps_col.update_one(
+
+        db_camps.update_one(
             {"_id": camp["_id"]},
             {"$inc": {f"resources.{resource_map[category]}": amount * op}}
         )
-        msg = f"{'Přidáno' if op > 0 else 'Odebráno'} {category} {abs(amount)}x"
+
+        msg = f"{'Přidáno' if op > 0 else 'Odebráno'} {category} {amount}x"
 
     elif category in list_map:
-        # === LISTS ===
+        if not item:
+            await interaction.response.send_message(
+                "❌ Musíš zadat název položky.",
+                ephemeral=True
+            )
+            return
+
+        amount = amount or 1
+        if amount <= 0:
+            await interaction.response.send_message(
+                "❌ Počet musí být větší než 0.",
+                ephemeral=True
+            )
+            return
+
         key = list_map[category]
+        camp_items = camp.get(key, {})
+
+        msg = ""
+
+        # ===== ADD =====
         if action.value == "add":
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$addToSet": {key: value}}
-            )
-            msg = f"{category.capitalize()}: {value} přidáno"
-        else:
-            camps_col.update_one(
-                {"_id": camp["_id"]},
-                {"$pull": {key: value}}
-            )
-            msg = f"{category.capitalize()}: {value} odebráno"
+
+            if item not in camp_items:
+                db_camps.update_one(
+                    {"_id": camp["_id"]},
+                    {
+                        "$set": {
+                            f"{key}.{item}": {
+                                "count": amount,
+                                "desc": desc
+                            }
+                        }
+                    }
+                )
+                total = amount
+            else:
+                db_camps.update_one(
+                    {"_id": camp["_id"]},
+                    {
+                        "$inc": {f"{key}.{item}.count": amount}
+                    }
+                )
+
+                if desc:
+                    db_camps.update_one(
+                        {"_id": camp["_id"]},
+                        {"$set": {f"{key}.{item}.desc": desc}}
+                    )
+
+                total = camp_items[item]["count"] + amount
+
+            msg = f"✅ **{item}** přidáno ×{amount} (celkem {total}×)"
+
+        # ===== REMOVE =====
+        elif action.value == "remove":
+
+            if item not in camp_items:
+                await interaction.response.send_message(
+                    f"⚠️ **{item}** není v této kategorii.",
+                    ephemeral=True
+                )
+                return
+
+            if amount > camp_items[item]["count"]:
+                await interaction.response.send_message(
+                    f"⚠️ Nemůžeš odebrat {amount}×, "
+                    f"tábor má jen {camp_items[item]['count']}×.",
+                    ephemeral=True
+                )
+                return
+
+            new_count = camp_items[item]["count"] - amount
+
+            if new_count <= 0:
+                db_camps.update_one(
+                    {"_id": camp["_id"]},
+                    {"$unset": {f"{key}.{item}": ""}}
+                )
+                msg = f"🗑️ **{item}** zcela odebrán"
+            else:
+                db_camps.update_one(
+                    {"_id": camp["_id"]},
+                    {"$inc": {f"{key}.{item}.count": -amount}}
+                )
+                msg = f"➖ **{item}** odebráno ×{amount} (zbývá {new_count}×)"
     else:
         await interaction.response.send_message("❌ Neznámá kategorie.", ephemeral=True)
         return
@@ -102,7 +188,7 @@ async def tabor_category_autocomplete(
 
     return choices[:25]
 
-@tabor.autocomplete("value")
+@tabor.autocomplete("item")
 async def tabor_value_autocomplete(
     interaction: discord.Interaction,
     current: str
@@ -136,28 +222,29 @@ async def tabor_value_autocomplete(
 
     # === AUTOCOMPLETE LOGIKA ===
 
-    # 📦 SKLAD
+    # 📦 SKLAD    
     if category == "sklad":
         return [
-            app_commands.Choice(name=f"📦 {i}", value=i)
-            for i in camp.get("storage", [])
-            if current.lower() in i.lower()
+            app_commands.Choice(name=f"📦 {name} ({data.get('count',1)}x)",value=name)
+            for name, data in camp.get("storage", {}).items()
+            if current.lower() in name.lower()
         ][:25]
 
-    # 🏗️ VYLEPŠENÍ
+    # 🏗️ VYLEPŠENÍ    
     if category == "vylepšení":
         return [
-            app_commands.Choice(name=f"🏗️ {u}", value=u)
-            for u in camp.get("upgrades", [])
-            if current.lower() in u.lower()
+            app_commands.Choice(name=f"🏗️ {name} ({data.get('count',1)}x)",value=name)
+            for name, data in camp.get("upgrades", {}).items()
+            if current.lower() in name.lower()
         ][:25]
 
     # 📜 BLUEPRINTS
     if category == "blueprints":
         return [
-            app_commands.Choice(name=f"📜 {b}", value=b)
-            for b in camp.get("blueprints", [])
-            if current.lower() in b.lower()
+            app_commands.Choice(name=f"📜 {name} ({data.get('count',1)}x)",value=name)
+            for name, data in camp.get("blueprints", {}).items()
+            if current.lower() in name.lower()
         ][:25]
+    
 
     return []

@@ -1,4 +1,4 @@
-from features._import_ import *
+from utils._import_ import *
 
 @bot.tree.command(name="perks", description="Správa perků hráče")
 @app_commands.describe(

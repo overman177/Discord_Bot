@@ -1,4 +1,4 @@
-from features._import_ import *
+from utils._import_ import *
 
 @bot.tree.command(name="stats", description="Zobrazí nebo upraví statistiky hráče")
 @app_commands.describe(
@@ -40,9 +40,6 @@ async def stats(
         )
 
         embed.set_thumbnail(url=target.avatar.url if target.avatar else None)
-
-        embed.add_field(name="⭐ Level", value=level, inline=True)
-        embed.add_field(name="📈 XP", value=xp_bar(xp), inline=False)
 
         embed.add_field(
             name="Staty",

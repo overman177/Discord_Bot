@@ -11,8 +11,10 @@ url = os.getenv('MONGODB_SERVER')
 client = MongoClient(url, server_api=ServerApi('1'))
 
 db = client["discord_bot"]
-users_col = db["users"]
-camps_col = db["camps"]
+db_users = db["users"]
+db_camps = db["camps"]
+db_leaderboards = db["leaderboards"]
+db_initiative = db["initiative"]
 
 # připojení k databázi
 try:

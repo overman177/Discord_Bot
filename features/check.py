@@ -1,11 +1,6 @@
-from features._import_ import *
+from utils._import_ import *
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-def get_dice_image(die_type: int, number: int, Dice_Dir) -> str:
-    folder = f"d{die_type}"  # např. d6
-    filename = f"{number}.png"
-    return os.path.join(Dice_Dir, folder, filename)
 
 @bot.tree.command(name="check", description="Hod D20 + bonus ze statu")
 @app_commands.describe(stat="Stat na který chceš hodit check")

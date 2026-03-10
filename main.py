@@ -2,7 +2,7 @@
 import logging
 
 # Bot necesities
-from handler  import *
+from bot_instance  import *
 from MongoDB  import *
 
 # Functionality
@@ -15,8 +15,8 @@ async def on_ready() -> None:
     # Synchrinizacevslash commandu s discordem
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} command(s)")
+        print(f"Synchronizováno {len(synced)} příkazů")
     except Exception as e:
-        print(f"Failed to sync commands: {e}")
+        print(f"Chyba synchronizace: {e}")
 
-bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+bot.run(token, log_handler=log_handler, log_level=logging.DEBUG)

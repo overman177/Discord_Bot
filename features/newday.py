@@ -1,4 +1,4 @@
-from features._import_ import *
+from utils._import_ import *
 
 @bot.tree.command(name="newday", description="Spustí nový den (hunger / HP / reset perků)")
 @app_commands.checks.has_permissions(administrator=True)
