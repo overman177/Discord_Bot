@@ -2,8 +2,8 @@
 import logging
 
 # Bot necesities
-from bot_instance  import *
-from MongoDB  import *
+from core.bot_instance import *
+from core.MongoDB import *
 
 # Functionality
 from utils    import *

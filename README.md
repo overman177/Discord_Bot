@@ -14,7 +14,7 @@ Discord bot pro správu hráčských statistik, inventáře, perků, táborů, i
 2. Nainstaluj závislosti:
    `pip install -r requirements.txt`
 3. Spusť bota:
-   `python main.py`
+   `python -m core.main`
 
 ## Prostředí
 

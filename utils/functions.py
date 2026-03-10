@@ -2,7 +2,7 @@ import discord
 from typing import Optional
 import random
 
-from MongoDB import *
+from core.MongoDB import *
 from utils.config import *
 
 def roll_d(d: int) -> int:
