@@ -1,7 +1,13 @@
+from pathlib import Path
+
 from discord import app_commands
-#==========================================================================================================================
-#===== EMOJI ==============================================================================================================
-#==========================================================================================================================
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+ASSETS_DIR = BASE_DIR / "Assets"
+DICE_DIR = ASSETS_DIR / "Dice"
+FONT_DIR = ASSETS_DIR / "Fonts"
+TEMP_DIR = BASE_DIR / "tmp"
+
 STAT_EMOJIS = {
     "xp": "⭐",
     "hp": "❤️",
@@ -32,24 +38,21 @@ TABOR_CATEGORY_EMOJIS = {
     "sklad": "📦",
     "blueprints": "📜",
 }
-#==========================================================================================================================
-#===== SEZNAMY ============================================================================================================
-#==========================================================================================================================
-CHECK_STAT_KEYS = ["str","dex","int","cha","stealth","survival"]
+
+CHECK_STAT_KEYS = ["str", "dex", "int", "cha", "stealth", "survival"]
 MAIN_STAT_KEYS = ["hp", "def", "mana", "furioku", "hunger", "xp"]
 STAT_KEYS = CHECK_STAT_KEYS + MAIN_STAT_KEYS
 DEFAULT_STATS = {key: 0 for key in STAT_KEYS}
-DEFAULT_STATS["hp"] = 50  # default HP
+DEFAULT_STATS["hp"] = 50
 
-
-TABOR_CATEGORIES = ["dřevo","kámen","scrap","vylepšení","sklad","blueprints",]
+TABOR_CATEGORIES = ["dřevo", "kámen", "scrap", "vylepšení", "sklad", "blueprints"]
 CATEGORY_MAP = {
     "dřevo": ("resources.wood", int),
     "kámen": ("resources.stone", int),
     "scrap": ("resources.scrap", int),
     "vylepšení": ("upgrades", str),
     "sklad": ("storage", str),
-    "blueprints": ("blueprints", str)
+    "blueprints": ("blueprints", str),
 }
 
 TEAM_ROLES = ["Unda", "Ignis", "Aeris", "Terra"]
@@ -64,9 +67,7 @@ STATUS_EFFECTS = {
     "hot": "🔥 Hot",
     "concussed": "💫 Concussed",
 }
-#==========================================================================================================================
-#===== Choices ============================================================================================================
-#==========================================================================================================================
+
 STAT_CHOICES = [
     app_commands.Choice(name=f"{STAT_EMOJIS[key]}{key.upper()}", value=key)
     for key in STAT_KEYS
@@ -88,4 +89,12 @@ ACTION_CHOICES = [
 
 PERK_USES_CHOICES = [
     app_commands.Choice(name="Pasivní", value="passive")
+]
+
+INICIATIVE_CHOICES = [
+    app_commands.Choice(name="Create", value="create"),
+    app_commands.Choice(name="Finish", value="finish"),
+    app_commands.Choice(name="Add", value="add"),
+    app_commands.Choice(name="Remove", value="remove"),
+    app_commands.Choice(name="EOT", value="eot"),
 ]
