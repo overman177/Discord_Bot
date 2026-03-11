@@ -1,0 +1,4 @@
+interface:
+  display_name: "Use Case Diagrams"
+  short_description: "Create clean, readable UML use case diagrams"
+  default_prompt: "Create or review a UML use case diagram that follows standard notation, stays readable, and minimizes clutter while meeting the user's assignment constraints."
