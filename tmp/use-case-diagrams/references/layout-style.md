@@ -10,7 +10,9 @@ Target qualities:
 - one main actor on the left
 - one main scenario column in the system boundary
 - one side column for included or extending support use cases
+- true ellipse use-case shapes
 - short dashed relation arrows
+- only straight connectors and 90-degree bends
 - minimal crossings
 - enough whitespace to separate groups
 - no decorative use cases added just to fill space
@@ -41,10 +43,11 @@ Use this order before writing PlantUML:
 - Put the system boundary in the center with extra horizontal space.
 - Keep the most important use case slightly above center.
 - Group related use cases vertically instead of scattering them horizontally.
-- Keep actor associations mostly horizontal.
+- Keep actor associations mostly horizontal or orthogonal, never curved.
 - Keep `include` arrows short and usually pointing inward or sideways to a nearby support column.
 - Keep `extend` arrows short and usually pointing inward from the opposite side.
 - Keep generalization vertical when possible.
+- Use only orthogonal routing. Do not accept curved or spline-like connectors.
 - If two arrows would cross, move the bubble first and only then accept the relation.
 - Use hidden links in PlantUML to lock vertical columns before adding semantic arrows.
 
@@ -86,13 +89,21 @@ UC1 -[hidden]down-> UC2
 UC2 -[hidden]down-> UC3
 UCI -[hidden]down-> UCE
 
-Primary --> UC1
-Primary --> UC2
-Secondary --> UC3
+Primary -right-> UC1
+Primary -right-> UC2
+Secondary -left-> UC3
 UC1 .> UCI : <<include>>
 UCE .> UC2 : <<extend>>
 @enduml
 ```
+
+## Rendering safety
+
+- Render the final diagram with PlantUML when possible.
+- If a preview tool escapes stereotype labels into text such as `&lt;&lt;include&gt;&gt;`, do not accept that preview as final output.
+- If a preview tool renders use cases as rounded rectangles, do not accept that preview as final output.
+- Keep stereotype labels close to the dashed arrow and ensure they remain legible against the background.
+- Avoid dark themes unless the user explicitly asks for them, because dashed labels are often harder to read.
 
 ## Template selection
 
@@ -102,7 +113,7 @@ Use one of these patterns instead of inventing a new arrangement every time:
 
 Use when one actor drives most goals.
 - Primary actor on the left
-- Main goals in a vertical stack
+- Main goals in a vertical stack of ellipses
 - Shared included use case in a side column close to the reused goals
 - Optional extender near the base use case it modifies
 
@@ -130,3 +141,5 @@ Avoid these unless the user explicitly asks for them:
 - adding extension points text when it does not help the reader
 - squeezing too many use cases into a narrow boundary
 - letting one actor create a starburst of diagonal associations
+- accepting curved routing, diagonal clutter, or unreadable dashed-line labels in the final render
+- accepting non-ellipse use-case shapes in the final render

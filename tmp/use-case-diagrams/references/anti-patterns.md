@@ -91,6 +91,19 @@ Why it is bad:
 Fix:
 - Remove any use case or relation that does not help explain the main user goals or assignment-required relations.
 
+## 8. Fake use-case shapes
+
+Symptom:
+- Use cases render as rounded rectangles, cards, capsules, or generic boxes instead of ellipses.
+
+Why it is bad:
+- The diagram stops looking like a proper UML use case diagram.
+- The reader immediately sees the notation is wrong.
+
+Fix:
+- Use a renderer and source format that preserve ellipse use-case shapes.
+- Reject the render and rerender if the shape is wrong.
+
 ## Final rejection test
 
 Reject or redesign the draft if any of these are true:
@@ -99,3 +112,4 @@ Reject or redesign the draft if any of these are true:
 - the reader cannot identify the main scenario in three seconds
 - the diagram uses invented stereotypes
 - the diagram mixes user goals with obvious implementation internals
+- the use cases are not rendered as ellipses

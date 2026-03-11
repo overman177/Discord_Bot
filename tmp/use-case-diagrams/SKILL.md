@@ -27,15 +27,18 @@ Read [references/anti-patterns.md](references/anti-patterns.md) when the user sh
 4. Write use cases as short goal-oriented verb phrases at a similar level of abstraction.
 5. Keep the first candidate diagram small. Prefer roughly 6 to 8 use cases unless the user or domain clearly needs more.
 6. Build the composition before drawing relations: choose one main actor on the left, at most one secondary actor group on the right, a central column of main use cases, included use cases in a nearby side column, extending use cases close to the base use case they modify, and specialized actors or use cases below their parent.
-7. Use hidden layout links or column groupings in PlantUML when needed to keep the diagram stable and readable. Use them only for layout, not semantics.
-8. Connect actors directly to the use cases they initiate or participate in. Avoid duplicating associations when actor generalization communicates the same meaning more clearly.
-9. Use `include` only when the base use case always performs the included behavior. Draw a dashed dependency arrow from the base use case to the included use case and label it `<<include>>`.
-10. Use `extend` only when additional behavior is optional, conditional, or exceptional. Draw a dashed dependency arrow from the extending use case to the extended base use case and label it `<<extend>>`. Use extension points only when they actually clarify where the optional behavior plugs in.
-11. Use generalization only for a true specialization. Draw a solid line with a hollow triangle pointing to the parent actor or parent use case.
-12. Prefer actor generalization over use-case generalization when the specialization is mainly about user roles. Use use-case generalization only when one goal is genuinely a specialized form of another goal.
-13. If the diagram still needs long crisscrossing lines, change the selected use cases or the placement before adding more notation.
-14. Run the anti-pattern check: too many actor associations, too many dashed arrows, invalid stereotypes, mixed abstraction, or internal implementation details pretending to be actors.
-15. Check the final diagram for minimal crossing lines, clear labels, and a defensible rationale for every relation.
+7. Render use cases as true ellipses. Reject rounded rectangles, capsules, generic boxes, or any other substitute shape in final output.
+8. Use only orthogonal connectors in the rendered diagram: straight segments with 90-degree bends. Reject curved, diagonal-only, or freeform connector routing when a cleaner orthogonal layout is possible.
+9. Prefer PlantUML for final source and rendering when true ellipse shapes, stereotype labels, and orthogonal routing must stay correct. Do not switch to a renderer that escapes `<<include>>` or `<<extend>>` into unreadable HTML entities or that replaces use-case ellipses with rounded rectangles.
+10. Use hidden layout links or column groupings in PlantUML when needed to keep the diagram stable and readable. Use them only for layout, not semantics.
+11. Connect actors directly to the use cases they initiate or participate in. Avoid duplicating associations when actor generalization communicates the same meaning more clearly.
+12. Use `include` only when the base use case always performs the included behavior. Draw a dashed dependency arrow from the base use case to the included use case and label it `<<include>>`.
+13. Use `extend` only when additional behavior is optional, conditional, or exceptional. Draw a dashed dependency arrow from the extending use case to the extended base use case and label it `<<extend>>`. Use extension points only when they actually clarify where the optional behavior plugs in.
+14. Use generalization only for a true specialization. Draw a solid line with a hollow triangle pointing to the parent actor or parent use case.
+15. Prefer actor generalization over use-case generalization when the specialization is mainly about user roles. Use use-case generalization only when one goal is genuinely a specialized form of another goal.
+16. If the diagram still needs long crisscrossing lines, change the selected use cases or the placement before adding more notation.
+17. Run the anti-pattern check: too many actor associations, too many dashed arrows, invalid stereotypes, unreadable dashed-line labels, non-ellipse use-case shapes, or internal implementation details pretending to be actors.
+18. Check the final diagram for minimal crossing lines, clear labels, and a defensible rationale for every relation.
 
 ## Output Pattern
 
@@ -56,6 +59,9 @@ For final deliverables, omit tutorial arrows, red explanatory labels, and other 
 - Keep the diagram at user-goal level, not UI click level.
 - Avoid relations added only to satisfy a checklist if the semantics are wrong.
 - Use the standard UML stereotype `<<extend>>` in outputs. Do not output misspellings such as `<<extends>>`, `<<extentds>>`, or invented labels such as `<<exclude>>`.
+- Render every use case as a true ellipse.
+- Use only straight segments and 90-degree bends for connectors in rendered output.
+- Dashed-line relation labels must be readable and must render as literal `<<include>>` or `<<extend>>`, not HTML-escaped text.
 - If the assignment requires a relation that the chosen domain does not support naturally, say so and propose the closest valid redesign.
 - Prefer fewer, clearer actors over role duplicates with nearly identical links.
 - Prefer fewer bubbles and fewer crossings over exhaustive decomposition.

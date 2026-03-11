@@ -10,6 +10,7 @@ Use this reference when the user wants diagrams to resemble the approved example
 - Included or extending use cases sit close to the related base use case instead of floating far away.
 - The system boundary is obvious and not overloaded.
 - The diagram is readable even before the reader studies the labels.
+- The use cases are actual bubbles, not boxes.
 
 ## Preferred visual structure
 
@@ -19,7 +20,9 @@ Prefer this arrangement:
 - main use cases in one vertical column
 - secondary support use cases in a nearby side column
 - generalization stacked vertically
-- mostly horizontal actor links and short dashed dependency links
+- mostly horizontal or orthogonal actor links and short dashed dependency links
+- only straight connectors and right-angle bends
+- true ellipse use-case shapes
 
 ## Preferred visual tone
 
@@ -33,6 +36,7 @@ Prefer this arrangement:
 
 - Keep only the use cases needed to explain the scenario and required UML relations.
 - Use extension points only when they materially clarify the `extend` relation.
+- Keep dashed-line labels readable; `<<include>>` and `<<extend>>` must be immediately recognizable.
 - If the diagram is for final submission, remove teaching annotations such as red arrows naming `Actor`, `Association`, or `Extension Point`.
 - If the diagram is for study or explanation, those annotations are acceptable as a temporary teaching layer.
 
@@ -72,3 +76,5 @@ Structure:
 - too many actors on both sides unless the scenario truly needs them
 - mixing explanation markup and final submission markup in the same deliverable
 - over-engineering the diagram just because more space is available
+- curved connectors or labels that cannot be read at first glance
+- rounded rectangles instead of ellipse use cases

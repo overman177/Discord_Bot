@@ -49,6 +49,8 @@ Use this reference as a compact checklist when creating or reviewing a use case 
 - Mixing high-level business goals with low-level technical steps in the same diagram.
 - Drawing a reversed `include` or reversed `extend` arrow.
 - Using `<<extends>>`, `<<exclude>>`, or other non-standard labels in a final diagram.
+- Letting stereotype text render as HTML-escaped text such as `&lt;&lt;include&gt;&gt;`.
+- Using curved connectors or non-orthogonal routing in the final render.
 - Drawing associations between actors instead of using generalization when appropriate.
 - Using `include` and `extend` as decoration without clear semantics.
 - Giving one actor a fan-out of many diagonal associations that dominate the whole picture.
@@ -63,6 +65,8 @@ Use this reference as a compact checklist when creating or reviewing a use case 
 - Is each `extend` optional or conditional?
 - Is inheritance a real specialization?
 - Does the arrow direction match the chosen relation?
+- Are all connectors straight or right-angled rather than curved?
+- Are dashed-line labels readable and rendered exactly as `<<include>>` or `<<extend>>`?
 - Does one actor dominate the layout with too many associations?
 - Is the diagram readable without dense crossing lines?
 
@@ -71,6 +75,7 @@ Use this reference as a compact checklist when creating or reviewing a use case 
 ```plantuml
 @startuml
 left to right direction
+skinparam linetype ortho
 
 actor User
 actor Admin
