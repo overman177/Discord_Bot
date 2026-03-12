@@ -1,4 +1,0 @@
-interface:
-  display_name: "Windows Edit Fastpath"
-  short_description: "Avoid repeated rejected edits on Windows"
-  default_prompt: "Use $windows-edit-fastpath to stage multi-file edits safely, validate early, and avoid repeating rejected patch attempts on Windows."
